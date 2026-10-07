@@ -4,8 +4,8 @@ import argparse
 import sys
 from pathlib import Path
 
-from mirrorguard.loader import Library
-from mirrorguard.render import render_personas, render_rubric
+from mirrorguard.library.loader import Library
+from mirrorguard.library.render import render_personas, render_rubric
 
 
 def _cmd_validate(args: argparse.Namespace, library: Library) -> int:

@@ -28,6 +28,3 @@ node_modules/
 
 # Local databases
 *.db
-
-# Phase snapshots used once by scripts/setup_git_history.sh
-.phase-snapshots/

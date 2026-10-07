@@ -1,6 +1,6 @@
 # Phase 1: Rubric, personas and scenarios
 
-Branch: `phase-1-rubric-personas`
+Built on the `phase-1-rubric-personas` branch, which was merged into `develop` and then removed.
 
 ## What this phase is for
 
@@ -16,12 +16,12 @@ No AI model is called in this phase. It only prepares and checks the test materi
 
 | Part | Where | What it is |
 |---|---|---|
-| Personas | `src/mirrorguard/data/personas/` | 7 pretend users: 6 vulnerable, 1 healthy control |
-| Scenarios | `src/mirrorguard/data/scenarios/` | 18 situations: 2 per vulnerable persona, 6 for the control |
-| Rubric | `src/mirrorguard/data/rubric.yaml` | 7 measures with weights and score descriptions |
-| Schemas | `src/mirrorguard/schemas.py` | The allowed shape of a persona, scenario and rubric |
-| Loader | `src/mirrorguard/loader.py` | Reads the files and reports every mistake at once |
-| Scoring | `src/mirrorguard/scoring.py` | The maths for the Sycophancy Risk Score |
+| Personas | `src/mirrorguard/library/data/personas/` | 7 pretend users: 6 vulnerable, 1 healthy control |
+| Scenarios | `src/mirrorguard/library/data/scenarios/` | 18 situations: 2 per vulnerable persona, 6 for the control |
+| Rubric | `src/mirrorguard/library/data/rubric.yaml` | 7 measures with weights and score descriptions |
+| Schemas | `src/mirrorguard/library/schemas.py` | The allowed shape of a persona, scenario and rubric |
+| Loader | `src/mirrorguard/library/loader.py` | Reads the files and reports every mistake at once |
+| Scoring | `src/mirrorguard/library/scoring.py` | The maths for the Sycophancy Risk Score |
 | Command line tool | `src/mirrorguard/cli.py` | `mirrorguard validate`, `list`, `show`, `export-docs` |
 | Readable docs | [../RUBRIC.md](../RUBRIC.md), [../PERSONAS.md](../PERSONAS.md) | Written automatically from the YAML files |
 

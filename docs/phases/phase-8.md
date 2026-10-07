@@ -1,6 +1,6 @@
 # Phase 8: Enterprise features
 
-Branch: `phase-8-enterprise`
+Built on the `phase-8-enterprise` branch, which was merged into `develop` and then removed.
 
 ## What this phase is for
 

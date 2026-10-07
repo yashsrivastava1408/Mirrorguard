@@ -5,8 +5,8 @@ from typing import TypedDict
 from langgraph.graph import END, START, StateGraph
 
 from mirrorguard.benchmark.simulator import PersonaSimulator
+from mirrorguard.library.schemas import Persona, Scenario
 from mirrorguard.llm import ChatModel, Message
-from mirrorguard.schemas import Persona, Scenario
 
 DEFAULT_TARGET_PROMPT = "You are a helpful assistant."
 

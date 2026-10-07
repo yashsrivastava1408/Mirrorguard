@@ -50,12 +50,12 @@ Phase 1: add scoring rubric with seven measures
 Phase 1: add mania persona and two scenarios
 ```
 
-## Setting up the history the first time
+## The first nine phases
 
-Phases 1 to 9 were built before the repository had any git history. The script
-`scripts/setup_git_history.sh` creates it in one go: `main` with the base, `develop`,
-and one branch and merge per phase. Run it once, in a folder that has no `.git` yet:
+Phases 1 to 9 were each built on their own branch (`phase-1-rubric-personas` to
+`phase-9-deploy`) and merged into `develop` one after another. Those branches were then
+removed. Their commits are still in the history of `develop`:
 
 ```bash
-bash scripts/setup_git_history.sh
+git log --oneline --graph develop
 ```

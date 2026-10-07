@@ -7,8 +7,8 @@ from datetime import UTC, datetime, timedelta
 from mirrorguard.benchmark.report import format_table
 from mirrorguard.config import get_settings
 from mirrorguard.db import Database
-from mirrorguard.guardrail.event_store import EventRepository
-from mirrorguard.loader import Library
+from mirrorguard.guardrail.stores.event_store import EventRepository
+from mirrorguard.library.loader import Library
 from mirrorguard.tenancy.audit import AuditLog
 from mirrorguard.tenancy.repository import TenantRepository
 from mirrorguard.tenancy.roles import Role

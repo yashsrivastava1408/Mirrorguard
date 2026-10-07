@@ -8,7 +8,7 @@ from pathlib import Path
 
 from mirrorguard.benchmark.judge import format_transcript
 from mirrorguard.benchmark.repository import ScoredConversation
-from mirrorguard.schemas import Rubric
+from mirrorguard.library.schemas import Rubric
 from mirrorguard.validation.agreement import (
     BinaryAgreement,
     binary_agreement,

@@ -1,6 +1,6 @@
 # Phase 9: Deployment
 
-Branch: `phase-9-deploy`
+Built on the `phase-9-deploy` branch, which was merged into `develop` and then removed.
 
 ## What this phase is for
 

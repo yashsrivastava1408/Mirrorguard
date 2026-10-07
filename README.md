@@ -5,8 +5,8 @@
 MirrorGuard measures how much AI chatbots over-agree with psychologically vulnerable users, and protects those users in real time.
 
 > **Status: All nine phases are built and tested with stand-in models. There are no real-model results yet. See "What is not done yet" below.**
-> The `main` branch holds only the project base. The build lives on `develop`,
-> one phase branch at a time. See [docs/BRANCHING.md](docs/BRANCHING.md) and the notes in `docs/phases/`.
+> The `main` branch holds only the project base. The full project is on `develop`.
+> See [docs/BRANCHING.md](docs/BRANCHING.md) and the notes for each phase in `docs/phases/`.
 
 ## The problem in simple words
 
@@ -248,23 +248,23 @@ sequenceDiagram
 | Component | What it does | Code |
 |---|---|---|
 | Risk scorer | A small, fast model reads the last few messages and returns low, medium or high risk with the signals it noticed. It never diagnoses. | `guardrail/risk.py` |
-| Session memory | Remembers the risk of recent turns in each chat, so one calm message cannot reset a risky conversation. | `guardrail/session.py` |
-| Policy engine | Each tenant's rules: what to do at each risk level, shadow mode, what to do if the risk scorer fails. | `guardrail/policy.py`, `policy_store.py` |
+| Session memory | Remembers the risk of recent turns in each chat, so one calm message cannot reset a risky conversation. | `guardrail/stores/session.py` |
+| Policy engine | Each tenant's rules: what to do at each risk level, shadow mode, what to do if the risk scorer fails. | `guardrail/policy.py`, `stores/policy_store.py` |
 | Steering | Adds honesty instructions to the prompt before the chatbot answers. The customer's own prompt is kept. | `guardrail/steering.py` |
 | Reply guard | At high risk only: holds the reply, checks it, rewrites it if it is sycophantic, checks again. | `guardrail/reply_guard.py` |
 | Crisis help | Adds a helpline message when the user mentions harming themselves or others. Added by rule, not by the model. | `guardrail/policy.py`, `pipeline.py` |
-| Event queue | Saves every guarded turn in the background so a slow database never slows a reply. | `guardrail/events.py`, `event_store.py` |
+| Event queue | Saves every guarded turn in the background so a slow database never slows a reply. | `guardrail/events.py`, `stores/event_store.py` |
 | Pipeline | Runs the steps above in order, for normal and streamed replies. | `guardrail/pipeline.py` |
 
 ### Benchmark (tests chatbots)
 
 | Component | What it does | Code |
 |---|---|---|
-| Personas, scenarios, rubric | The test material: who is talking, what they want, and how replies are scored. | `data/`, `schemas.py`, `loader.py` |
+| Personas, scenarios, rubric | The test material: who is talking, what they want, and how replies are scored. | `library/data/`, `library/schemas.py`, `library/loader.py` |
 | Persona simulator | An AI plays the pretend user and keeps pushing the chatbot to agree. | `benchmark/simulator.py` |
 | Conversation engine | A loop: user speaks, chatbot replies, repeat for the set number of turns. | `benchmark/conversation.py` |
 | Judge | Scores every chatbot reply on each measure. It only sees the conversation up to the turn it is scoring. | `benchmark/judge.py` |
-| Scoring | The maths: weighted score, drift, gap between vulnerable and control users. | `scoring.py` |
+| Scoring | The maths: weighted score, drift, gap between vulnerable and control users. | `library/scoring.py` |
 | Runner | Runs many conversations at once, saves each step, and can stop and resume. | `benchmark/runner.py` |
 | Reports | Leaderboard, per-persona scores, per-language scores, guardrail off against on. | `benchmark/report.py` |
 | Judge validation | Makes blind labelling sheets for people and measures how well the judge agrees with them. | `validation/` |
@@ -300,7 +300,7 @@ sequenceDiagram
 | Dashboard | Next.js 16, React 19, TypeScript | The web app |
 | Styling | Tailwind CSS 4 | Dashboard layout, light and dark themes |
 | Test material | YAML | Personas, scenarios and the rubric, editable without code |
-| Tests | pytest, pytest-asyncio, fakeredis, httpx | 245 automated tests |
+| Tests | pytest, pytest-asyncio, fakeredis, httpx | 245 automated tests: 178 unit, 67 integration |
 | Code quality | Ruff, ESLint, TypeScript | Lint and format for Python, lint and types for the dashboard |
 | Load testing | k6 | Measuring the guardrail's own cost per reply |
 | Packaging | uv, Hatchling | Installing and building the Python package |
@@ -315,21 +315,28 @@ More detail, including how the system scales, is in [docs/ARCHITECTURE.md](docs/
 
 ```
 src/mirrorguard/
-  data/          personas, scenarios and the scoring rubric (YAML)
+  library/       the test material: personas, scenarios, rubric (YAML) and the scoring maths
   llm/           one interface for every model, with pacing and retries
   benchmark/     persona simulator, conversation engine, judge, runner, reports
   validation/    tools to compare the judge with human labels
-  guardrail/     risk scorer, policy, steering, reply check, sessions, events
+  guardrail/     risk scorer, policy, steering, reply check, events
+    stores/      where the guardrail keeps state: sessions, events, policies
   tenancy/       tenants, API keys, roles, audit log
   privacy/       masking of personal details
   api/           the OpenAI-compatible proxy and the dashboard endpoints
+    routes/      one file per group of endpoints
   db/            database tables
   migrations/    database migrations
-  commands/      the mirrorguard command line tool
-dashboard/       the web dashboard
-tests/           automated tests
+  commands/      the mirrorguard command line tool, one file per command group
+  config.py      settings, read from the environment
+  cli.py         entry point of the command line tool
+dashboard/       the web dashboard (Next.js)
+tests/
+  unit/          fast tests with stand-ins, in folders that mirror src/
+  integration/   tests that use a real database, a real HTTP server or the command line
+  support/       stand-ins and helpers shared by the tests
 docs/            architecture, roadmap, rubric, personas, notes for each phase
-scripts/         load test, git history set-up
+scripts/         load test
 ```
 
 ## The nine phases
@@ -371,6 +378,9 @@ Each phase's notes list its own open points in more detail.
 | [docs/RUBRIC.md](docs/RUBRIC.md) | The scoring rules |
 | [docs/PERSONAS.md](docs/PERSONAS.md) | The pretend users and their scenarios |
 | [docs/RELATED_WORK.md](docs/RELATED_WORK.md) | Existing research and what is new here |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | How to set up, test and add to the project |
+| [SECURITY.md](SECURITY.md) | Reporting problems and running MirrorGuard safely |
+| [CHANGELOG.md](CHANGELOG.md) | What changed in each version |
 | [docs/MirrorGuard_Project_Document.docx](docs/MirrorGuard_Project_Document.docx) | The original project plan |
 
 ## Ethics

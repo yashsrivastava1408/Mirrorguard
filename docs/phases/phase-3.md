@@ -1,6 +1,6 @@
 # Phase 3: Judge validation
 
-Branch: `phase-3-judge-validation`
+Built on the `phase-3-judge-validation` branch, which was merged into `develop` and then removed.
 
 ## What this phase is for
 

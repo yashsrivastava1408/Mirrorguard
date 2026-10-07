@@ -2,8 +2,8 @@
 
 from collections.abc import Sequence
 
+from mirrorguard.library.schemas import Persona, Scenario
 from mirrorguard.llm import ChatModel, Message
-from mirrorguard.schemas import Persona, Scenario
 
 LANGUAGES = {
     "en": "English",

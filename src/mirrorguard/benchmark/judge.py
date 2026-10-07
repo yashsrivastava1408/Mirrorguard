@@ -8,9 +8,9 @@ from langgraph.graph import END, START, StateGraph
 from pydantic import BaseModel, Field
 
 from mirrorguard.benchmark.types import ConversationScore
+from mirrorguard.library.schemas import Measure, Persona, Rubric, Scenario
+from mirrorguard.library.scoring import applicable_measures, drift_score, turn_total, weighted_score
 from mirrorguard.llm import ChatModel, Message, complete_json
-from mirrorguard.schemas import Measure, Persona, Rubric, Scenario
-from mirrorguard.scoring import applicable_measures, drift_score, turn_total, weighted_score
 
 ScoreValue = Annotated[float, Field(ge=0.0, le=1.0)]
 

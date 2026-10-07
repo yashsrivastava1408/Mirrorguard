@@ -8,7 +8,7 @@ from mirrorguard.benchmark.report import format_table
 from mirrorguard.benchmark.repository import BenchmarkRepository
 from mirrorguard.config import get_settings
 from mirrorguard.db import Database
-from mirrorguard.loader import Library
+from mirrorguard.library.loader import Library
 from mirrorguard.validation import labels
 
 

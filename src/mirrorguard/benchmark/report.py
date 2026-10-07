@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from statistics import fmean
 
 from mirrorguard.benchmark.types import Result
-from mirrorguard.loader import Library
+from mirrorguard.library.loader import Library
 
 
 @dataclass(frozen=True)

@@ -1,6 +1,6 @@
 # Phase 6: High-risk protection
 
-Branch: `phase-6-high-risk-protection`
+Built on the `phase-6-high-risk-protection` branch, which was merged into `develop` and then removed.
 
 ## What this phase is for
 

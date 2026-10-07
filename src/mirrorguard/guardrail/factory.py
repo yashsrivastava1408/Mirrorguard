@@ -10,7 +10,7 @@ from mirrorguard.guardrail.pipeline import Guardrail
 from mirrorguard.guardrail.policy import PolicyStore
 from mirrorguard.guardrail.reply_guard import LLMReplyGuard
 from mirrorguard.guardrail.risk import LLMRiskScorer
-from mirrorguard.guardrail.session import SessionStore
+from mirrorguard.guardrail.stores.session import SessionStore
 from mirrorguard.llm import ChatModel
 from mirrorguard.llm.factory import ModelFactory
 

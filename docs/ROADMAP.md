@@ -2,6 +2,8 @@
 
 The project is built in nine phases. Each phase has one branch, one clear output and a "done when" check.
 
+All nine phases have been built and merged into `develop`. The phase branches named below were removed after merging.
+
 Phases 1 to 5 alone make a complete project with a clear result: a benchmark, a guardrail, and numbers that show the guardrail works.
 
 | Phase | Branch | Work | Done when |

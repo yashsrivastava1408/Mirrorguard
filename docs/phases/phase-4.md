@@ -1,6 +1,6 @@
 # Phase 4: Guardrail proxy
 
-Branch: `phase-4-guardrail-proxy`
+Built on the `phase-4-guardrail-proxy` branch, which was merged into `develop` and then removed.
 
 ## What this phase is for
 
@@ -40,11 +40,11 @@ The reply also carries what MirrorGuard did:
 | Part | Where | What it does |
 |---|---|---|
 | Risk scorer | `guardrail/risk.py` | Small fast model reads the last few messages: low, medium or high |
-| Session memory | `guardrail/session.py` | Remembers recent risk per chat session (memory or Redis) |
+| Session memory | `guardrail/stores/session.py` | Remembers recent risk per chat session (memory or Redis) |
 | Policy | `guardrail/policy.py` | What to do at each level; shadow mode; fallback level |
 | Steering | `guardrail/steering.py` | The honesty instructions added to the prompt |
 | Pipeline | `guardrail/pipeline.py` | Ties the steps together, for normal and streamed replies |
-| Events | `guardrail/events.py`, `event_store.py` | Saves each turn in the background |
+| Events | `guardrail/events.py`, `guardrail/stores/event_store.py` | Saves each turn in the background |
 | API | `api/` | OpenAI-compatible endpoint, API keys, rate limits |
 
 ## The three actions

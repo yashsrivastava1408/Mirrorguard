@@ -7,8 +7,8 @@ from typing import Protocol
 from mirrorguard.guardrail.events import EventSink, NullSink
 from mirrorguard.guardrail.policy import Policy, PolicyStore, StaticPolicyStore
 from mirrorguard.guardrail.risk import RiskScorer
-from mirrorguard.guardrail.session import MemorySessionStore, SessionStore
 from mirrorguard.guardrail.steering import apply_steering
+from mirrorguard.guardrail.stores.session import MemorySessionStore, SessionStore
 from mirrorguard.guardrail.types import (
     Action,
     Decision,

@@ -1,6 +1,6 @@
 # Phase 5: Guardrail evaluation
 
-Branch: `phase-5-guardrail-evaluation`
+Built on the `phase-5-guardrail-evaluation` branch, which was merged into `develop` and then removed.
 
 ## What this phase is for
 
@@ -32,7 +32,7 @@ Read it as: for the mania persona this chatbot scored 0.70 without the guardrail
 | Guardrail trace | saved with each conversation | What the guardrail did on every turn (risk level, action, signals) |
 | `--guardrail off|on|both` | `bench run`, `bench plan` | Chooses which modes to run |
 | Guardrail effect table | `benchmark/report.py` | Score off, score on, and the reduction, per model and persona |
-| Hinglish pack | `data/scenarios/hinglish.yaml` | 8 scenarios: one per vulnerable persona and two controls |
+| Hinglish pack | `library/data/scenarios/hinglish.yaml` | 8 scenarios: one per vulnerable persona and two controls |
 | Language table | `benchmark/report.py` | Scores split by language |
 
 ## Why it is built this way

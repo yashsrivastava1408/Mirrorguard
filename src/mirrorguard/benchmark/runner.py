@@ -10,8 +10,8 @@ from mirrorguard.benchmark.conversation import ConversationEngine
 from mirrorguard.benchmark.judge import Judge
 from mirrorguard.benchmark.repository import BenchmarkRepository, PendingJob
 from mirrorguard.benchmark.types import Job
+from mirrorguard.library.loader import Library
 from mirrorguard.llm import ChatModel
-from mirrorguard.loader import Library
 
 log = logging.getLogger(__name__)
 

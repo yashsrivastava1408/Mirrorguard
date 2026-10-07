@@ -1,6 +1,5 @@
 .venv
 .git
-.phase-snapshots
 **/__pycache__
 **/node_modules
 **/.next

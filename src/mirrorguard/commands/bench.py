@@ -1,4 +1,4 @@
-"""Commands for the benchmark: plan, run, resume, list, report. Also `db` and `models`."""
+"""Commands for the benchmark: plan, run, resume, list, report."""
 
 import argparse
 import json
@@ -15,9 +15,8 @@ from mirrorguard.benchmark.simulator import PersonaSimulator
 from mirrorguard.benchmark.types import Job
 from mirrorguard.config import Settings, get_settings
 from mirrorguard.db import Database
-from mirrorguard.llm import LLMError, Message
+from mirrorguard.library.loader import Library
 from mirrorguard.llm.factory import ModelFactory, make_model_factory
-from mirrorguard.loader import Library
 
 GUARDRAIL_MODES = {"off": (False,), "on": (True,), "both": (False, True)}
 
@@ -78,30 +77,6 @@ async def _execute(run_id: str, runner: BenchmarkRunner, repository: BenchmarkRe
     if summary.failed:
         print(f"Run `mirrorguard bench resume {run_id}` to retry the failed jobs.")
     return 0 if not summary.failed else 2
-
-
-async def _cmd_db_init(args: argparse.Namespace, library: Library) -> int:
-    settings = get_settings()
-    database = Database(settings.database_url)
-    await database.create_tables()
-    await database.dispose()
-    print("Database tables are ready.")
-    return 0
-
-
-def _cmd_db_migrate(args: argparse.Namespace, library: Library) -> int:
-    from pathlib import Path
-
-    from alembic import command
-    from alembic.config import Config
-
-    import mirrorguard
-
-    config = Config()
-    config.set_main_option("script_location", str(Path(mirrorguard.__file__).parent / "migrations"))
-    command.upgrade(config, "head")
-    print("Database is up to date.")
-    return 0
 
 
 def _cmd_plan(args: argparse.Namespace, library: Library) -> int:
@@ -236,44 +211,6 @@ async def _cmd_report(args: argparse.Namespace, library: Library) -> int:
     return 0
 
 
-async def _cmd_models_check(args: argparse.Namespace, library: Library) -> int:
-    settings = get_settings()
-    models = make_model_factory(settings)
-    names = sorted(
-        {
-            settings.persona_model,
-            settings.judge_model,
-            settings.risk_model,
-            settings.rewriter_model,
-            *settings.target_models,
-        }
-    )
-    failures = 0
-    for name in names:
-        try:
-            await models(name).complete(
-                [Message(role="user", content="Reply with the single word OK.")], max_tokens=20
-            )
-            print(f"  ok      {name}")
-        except LLMError as exc:
-            failures += 1
-            print(f"  FAILED  {name}: {str(exc)[:160]}")
-    return 0 if not failures else 1
-
-
-def _cmd_serve(args: argparse.Namespace, library: Library) -> int:
-    import uvicorn
-
-    uvicorn.run(
-        "mirrorguard.api.app:app_from_settings",
-        factory=True,
-        host=args.host,
-        port=args.port,
-        workers=args.workers,
-    )
-    return 0
-
-
 def _add_job_options(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--targets", help="comma-separated models (default: MG_TARGET_MODELS)")
     parser.add_argument("--scenarios", help="comma-separated scenario ids (default: all)")
@@ -283,25 +220,6 @@ def _add_job_options(parser: argparse.ArgumentParser) -> None:
 
 
 def register(sub: argparse._SubParsersAction) -> None:
-    db_sub = sub.add_parser("db", help="database commands").add_subparsers(required=True)
-    db_sub.add_parser("init", help="create the tables directly (local SQLite)").set_defaults(
-        handler=_cmd_db_init
-    )
-    db_sub.add_parser("migrate", help="bring a production database up to date").set_defaults(
-        handler=_cmd_db_migrate
-    )
-
-    models_sub = sub.add_parser("models", help="model commands").add_subparsers(required=True)
-    models_sub.add_parser("check", help="check that every configured model answers").set_defaults(
-        handler=_cmd_models_check
-    )
-
-    serve = sub.add_parser("serve", help="start the guardrail API server")
-    serve.add_argument("--host", default="127.0.0.1")
-    serve.add_argument("--port", type=int, default=8000)
-    serve.add_argument("--workers", type=int, default=1, help="server processes to run")
-    serve.set_defaults(handler=_cmd_serve)
-
     bench_sub = sub.add_parser("bench", help="benchmark commands").add_subparsers(required=True)
 
     plan = bench_sub.add_parser("plan", help="show how big a run would be, without running it")

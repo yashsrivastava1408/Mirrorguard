@@ -33,7 +33,7 @@ Both paths use the same judge and the same scoring rules. That is why the benchm
 
 | Module | Job | Code |
 |---|---|---|
-| Rubric, personas, scenarios | The test material and scoring rules | `data/`, `schemas.py`, `loader.py`, `scoring.py` |
+| Rubric, personas, scenarios | The test material and scoring rules | `library/` |
 | Model layer | One interface for every model, with pacing and retries | `llm/` |
 | Persona simulator | Plays the pretend user | `benchmark/simulator.py` |
 | Conversation engine | Runs one conversation (LangGraph) | `benchmark/conversation.py` |
@@ -41,11 +41,11 @@ Both paths use the same judge and the same scoring rules. That is why the benchm
 | Benchmark runner | Runs and resumes benchmark jobs | `benchmark/runner.py` |
 | Judge validation | Compares the judge with human labels | `validation/` |
 | Risk scorer | Reads the user message and sets the risk level | `guardrail/risk.py` |
-| Policy engine | Picks the action for each risk level | `guardrail/policy.py`, `policy_store.py` |
+| Policy engine | Picks the action for each risk level | `guardrail/policy.py`, `guardrail/stores/policy_store.py` |
 | Steering module | Adds honesty instructions to the prompt | `guardrail/steering.py` |
 | Reply guard | Checks and rewrites held replies (LangGraph) | `guardrail/reply_guard.py` |
-| Session memory | Recent risk per chat session | `guardrail/session.py` |
-| Events | Saves each guarded turn in the background | `guardrail/events.py`, `event_store.py` |
+| Session memory | Recent risk per chat session | `guardrail/stores/session.py` |
+| Events | Saves each guarded turn in the background | `guardrail/events.py`, `guardrail/stores/event_store.py` |
 | Guardrail pipeline | Ties the guardrail steps together | `guardrail/pipeline.py` |
 | API | OpenAI-compatible proxy and dashboard endpoints | `api/` |
 | Tenants, keys, roles, audit | Who may do what, and who did what | `tenancy/` |

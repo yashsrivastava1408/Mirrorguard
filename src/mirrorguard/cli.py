@@ -8,18 +8,16 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from mirrorguard.commands import admin, bench, labels, library
-from mirrorguard.loader import LibraryError, load_library
+from mirrorguard.commands import admin, bench, db, labels, library, models, serve
+from mirrorguard.library.loader import LibraryError, load_library
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="mirrorguard", description=__doc__)
     parser.add_argument("--data-dir", help="folder with personas/, scenarios/ and rubric.yaml")
     sub = parser.add_subparsers(dest="command", required=True)
-    library.register(sub)
-    bench.register(sub)
-    labels.register(sub)
-    admin.register(sub)
+    for group in (library, bench, labels, models, serve, db, admin):
+        group.register(sub)
     return parser
 
 

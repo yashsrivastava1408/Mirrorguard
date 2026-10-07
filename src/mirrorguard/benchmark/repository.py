@@ -8,8 +8,8 @@ from sqlalchemy import select, update
 from mirrorguard.benchmark.types import ConversationScore, Job, Result
 from mirrorguard.db import Database
 from mirrorguard.db.models import BenchmarkRun, ConversationRecord, ScoreRecord, now
+from mirrorguard.library.loader import Library
 from mirrorguard.llm import Message
-from mirrorguard.loader import Library
 
 
 @dataclass(frozen=True)

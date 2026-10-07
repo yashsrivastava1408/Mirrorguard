@@ -1,6 +1,6 @@
 # Phase 7: Dashboard
 
-Branch: `phase-7-dashboard`
+Built on the `phase-7-dashboard` branch, which was merged into `develop` and then removed.
 
 ## What this phase is for
 
@@ -26,7 +26,7 @@ The reviewer clicks **Flag was right** or **Flag was wrong** and the item leaves
 | Review endpoint | `POST /v1/events/{id}/review` | Saves a reviewer's verdict |
 | Policy endpoints | `GET` and `PUT /v1/policy` | Read and change a tenant's rules |
 | Benchmark endpoints | `GET /v1/benchmarks...` | Runs, reports and transcripts |
-| Policy storage | `guardrail/policy_store.py` | Policies in the database, with a short cache |
+| Policy storage | `guardrail/stores/policy_store.py` | Policies in the database, with a short cache |
 
 ## Why it is built this way
 

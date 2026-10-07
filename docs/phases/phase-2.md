@@ -1,6 +1,6 @@
 # Phase 2: Benchmark engine
 
-Branch: `phase-2-benchmark-engine`
+Built on the `phase-2-benchmark-engine` branch, which was merged into `develop` and then removed.
 
 ## What this phase is for
 

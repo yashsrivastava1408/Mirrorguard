@@ -19,6 +19,19 @@ class PendingJob:
     transcript: list[Message] | None
 
 
+@dataclass(frozen=True)
+class ScoredConversation:
+    conversation_id: str
+    scenario_id: str
+    persona_id: str
+    target_model: str
+    guardrail: bool
+    transcript: list[Message]
+    measure_scores: dict[str, float | None]
+    total: float
+    summary: str
+
+
 class BenchmarkRepository:
     def __init__(self, database: Database):
         self._db = database
@@ -149,6 +162,30 @@ class BenchmarkRepository:
                     guardrail=conversation.guardrail,
                     total=score.total,
                     measure_scores=score.measure_scores,
+                )
+                for conversation, score in rows
+            ]
+
+    async def scored_conversations(self, run_id: str) -> list[ScoredConversation]:
+        """Full transcripts with their scores, for review and for human labelling."""
+        async with self._db.session() as session:
+            rows = await session.execute(
+                select(ConversationRecord, ScoreRecord)
+                .join(ScoreRecord, ScoreRecord.conversation_id == ConversationRecord.id)
+                .where(ConversationRecord.run_id == run_id)
+                .order_by(ConversationRecord.job_key)
+            )
+            return [
+                ScoredConversation(
+                    conversation_id=conversation.id,
+                    scenario_id=conversation.scenario_id,
+                    persona_id=conversation.persona_id,
+                    target_model=conversation.target_model,
+                    guardrail=conversation.guardrail,
+                    transcript=[Message.model_validate(m) for m in conversation.transcript],
+                    measure_scores=score.measure_scores,
+                    total=score.total,
+                    summary=score.summary,
                 )
                 for conversation, score in rows
             ]

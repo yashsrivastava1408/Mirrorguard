@@ -119,6 +119,7 @@ class Guardrail:
         messages: Sequence[Message],
         original: str,
         result: GuardedReply,
+        policy: Policy,
     ) -> None:
         decision = result.decision
         last_user = next((m.content for m in reversed(messages) if m.role == "user"), "")
@@ -139,6 +140,7 @@ class Guardrail:
                 issues=result.issues,
                 original_reply=original if result.rewritten else None,
                 from_fallback=decision.assessment.from_fallback,
+                store_text=policy.store_text,
             )
         )
 
@@ -157,7 +159,7 @@ class Guardrail:
             self.outgoing(messages, decision), temperature=temperature, max_tokens=max_tokens
         )
         result = await self._finish(messages, reply, decision, policy)
-        await self._record(tenant_id, session_id, upstream.name, messages, reply, result)
+        await self._record(tenant_id, session_id, upstream.name, messages, reply, result, policy)
         return result
 
     async def stream(
@@ -194,4 +196,4 @@ class Guardrail:
             result = await self._finish(messages, reply, decision, policy)
             if result.crisis_help_added:
                 yield result.content[len(reply) :]
-        await self._record(tenant_id, session_id, upstream.name, messages, reply, result)
+        await self._record(tenant_id, session_id, upstream.name, messages, reply, result, policy)

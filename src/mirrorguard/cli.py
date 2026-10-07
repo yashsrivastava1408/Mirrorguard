@@ -8,7 +8,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from mirrorguard.commands import bench, labels, library
+from mirrorguard.commands import admin, bench, labels, library
 from mirrorguard.loader import LibraryError, load_library
 
 
@@ -19,6 +19,7 @@ def build_parser() -> argparse.ArgumentParser:
     library.register(sub)
     bench.register(sub)
     labels.register(sub)
+    admin.register(sub)
     return parser
 
 

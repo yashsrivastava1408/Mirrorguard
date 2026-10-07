@@ -33,11 +33,14 @@ class Settings(BaseSettings):
 
     benchmark_concurrency: int = 4
 
-    # API keys for the proxy, as "key:tenant" pairs separated by commas.
-    # Used until keys are managed in the database.
+    # Extra admin API keys, as "key:tenant" pairs separated by commas. Handy for local
+    # runs. In production, create keys with `mirrorguard keys create` instead.
     api_keys: str = ""
     tenant_requests_per_minute: int = 120
     session_ttl_seconds: int = 24 * 3600
+
+    # Guardrail events older than this are removed by `mirrorguard retention purge`.
+    retention_days: int = 90
 
     # Web addresses allowed to call the API from a browser (the dashboard).
     cors_origins: Annotated[list[str], NoDecode] = ["http://localhost:3000"]

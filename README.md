@@ -80,22 +80,236 @@ See [docs/phases/phase-9.md](docs/phases/phase-9.md).
 
 ## Architecture
 
-![MirrorGuard architecture](docs/images/architecture.png)
+MirrorGuard is one backend with clear internal modules, a web dashboard and a command line tool. Think of it as a checkpoint standing between the user and the chatbot.
 
-Details are in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+### The whole system
+
+```mermaid
+flowchart TB
+    subgraph CLIENTS["Who uses it"]
+        direction LR
+        BOT["Customer chatbot app<br/>sends chat messages"]
+        DASH["Dashboard<br/>Next.js web app"]
+        CLI["mirrorguard command<br/>benchmarks, keys, setup"]
+    end
+
+    subgraph API["API layer - FastAPI"]
+        direction TB
+        AUTH["Key check and roles<br/>admin, engineer, reviewer, viewer"]
+        LIMIT["Rate limiter<br/>requests per tenant per minute"]
+        CHAT["Chat endpoint<br/>POST /v1/chat/completions"]
+        ADMIN["Dashboard endpoints<br/>stats, events, reviews, policy, keys, audit"]
+        BENCHAPI["Benchmark endpoints<br/>runs, reports, transcripts"]
+        AUTH --> LIMIT
+        LIMIT --> CHAT
+        LIMIT --> ADMIN
+        LIMIT --> BENCHAPI
+    end
+
+    subgraph GUARD["Guardrail path - live chat"]
+        direction TB
+        RISK["1. Risk scorer<br/>low, medium or high"]
+        SESSION["2. Session memory<br/>recent risk of this chat"]
+        POLICY["3. Policy engine<br/>pass, steer or check"]
+        STEER["4. Steering<br/>adds honesty instructions"]
+        REPLY["5. Reply guard<br/>check and rewrite, high risk only"]
+        CRISIS["6. Crisis help<br/>adds helpline message"]
+        QUEUE["Event queue<br/>saves in the background"]
+        RISK --> SESSION --> POLICY --> STEER --> REPLY --> CRISIS --> QUEUE
+    end
+
+    subgraph BENCH["Benchmark path - testing"]
+        direction TB
+        RUNNER["Runner<br/>plans jobs, resumes, retries"]
+        SIM["Persona simulator<br/>plays the pretend user"]
+        ENGINE["Conversation engine<br/>user turn, chatbot turn, repeat"]
+        JUDGE["Judge<br/>scores each reply on the rubric"]
+        REPORT["Reports<br/>leaderboard, guardrail off vs on"]
+        VALID["Judge validation<br/>compare with human labels"]
+        RUNNER --> ENGINE
+        SIM --> ENGINE
+        ENGINE --> JUDGE --> REPORT
+        JUDGE --> VALID
+    end
+
+    subgraph DATA["Test material - YAML files"]
+        direction LR
+        PERSONAS["7 personas"]
+        SCENARIOS["26 scenarios"]
+        RUBRIC["Rubric<br/>7 measures"]
+    end
+
+    subgraph LLM["Model layer"]
+        direction TB
+        THROTTLE["Pacing and retries<br/>one shared rate limit"]
+        LITELLM["LiteLLM<br/>one door to every provider"]
+        THROTTLE --> LITELLM
+    end
+
+    subgraph STORE["Storage"]
+        direction LR
+        PG[("PostgreSQL<br/>events, reviews, policies,<br/>keys, audit log, benchmark runs")]
+        REDIS[("Redis<br/>session risk, rate limits")]
+    end
+
+    GROQ["Groq models<br/>chatbots under test, judge, risk scorer, rewriter"]
+
+    BOT --> AUTH
+    DASH --> AUTH
+    CLI --> RUNNER
+    CHAT --> RISK
+    DATA --> BENCH
+    BENCH -. "guardrail on: same code" .-> GUARD
+    GUARD -- "risk scorer, reply guard" --> LLM
+    BENCH -- "simulator, chatbot, judge" --> LLM
+    LITELLM --> GROQ
+    SESSION --> REDIS
+    LIMIT --> REDIS
+    QUEUE --> PG
+    ADMIN --> PG
+    BENCHAPI --> PG
+    RUNNER --> PG
+```
+
+The dotted line is the important one: when a benchmark runs with the guardrail on, the pretend user's messages go through the **same** guardrail code that protects real users. So what the benchmark measures is what runs in production.
+
+### One chat turn, step by step
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant U as Chatbot app
+    participant A as API layer
+    participant R as Risk scorer
+    participant S as Session memory (Redis)
+    participant P as Policy engine
+    participant M as Chatbot model
+    participant G as Reply guard
+    participant D as Database
+
+    U->>A: user message with API key
+    A->>A: check key, role and rate limit
+    A->>R: latest messages
+    R-->>A: risk level and signals
+    A->>S: save this turn, read recent turns
+    S-->>A: session risk level
+    A->>P: session risk level
+    P-->>A: action: pass, steer or check
+
+    alt low risk: pass
+        A->>M: conversation unchanged
+        M-->>U: reply streams straight to the user
+    else medium risk: steer
+        A->>M: conversation plus honesty instructions
+        M-->>U: reply streams straight to the user
+    else high risk: check
+        A->>M: conversation plus stronger instructions
+        M-->>A: reply is held back
+        A->>G: is this reply safe to send?
+        G-->>A: ok, or a rewritten reply
+        A-->>U: final reply, plus crisis help if needed
+    end
+
+    A-)D: save the turn in the background, personal details masked
+```
+
+### One benchmark conversation, step by step
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant C as mirrorguard bench run
+    participant N as Runner
+    participant S as Persona simulator
+    participant T as Chatbot under test
+    participant J as Judge
+    participant D as Database
+
+    C->>N: scenarios, models, guardrail off or on
+    N->>D: save the list of jobs
+    loop for each turn
+        N->>S: what does the pretend user say next?
+        S-->>N: user message (the first one is fixed)
+        N->>T: conversation so far
+        T-->>N: chatbot reply
+    end
+    N->>D: save the transcript
+    N->>J: transcript, persona, scenario, rubric
+    J-->>N: score per turn and per measure
+    N->>D: save the scores
+    C->>D: bench report
+    D-->>C: leaderboard and guardrail effect
+```
+
+## What each component does
+
+### Guardrail (protects real users)
+
+| Component | What it does | Code |
+|---|---|---|
+| Risk scorer | A small, fast model reads the last few messages and returns low, medium or high risk with the signals it noticed. It never diagnoses. | `guardrail/risk.py` |
+| Session memory | Remembers the risk of recent turns in each chat, so one calm message cannot reset a risky conversation. | `guardrail/session.py` |
+| Policy engine | Each tenant's rules: what to do at each risk level, shadow mode, what to do if the risk scorer fails. | `guardrail/policy.py`, `policy_store.py` |
+| Steering | Adds honesty instructions to the prompt before the chatbot answers. The customer's own prompt is kept. | `guardrail/steering.py` |
+| Reply guard | At high risk only: holds the reply, checks it, rewrites it if it is sycophantic, checks again. | `guardrail/reply_guard.py` |
+| Crisis help | Adds a helpline message when the user mentions harming themselves or others. Added by rule, not by the model. | `guardrail/policy.py`, `pipeline.py` |
+| Event queue | Saves every guarded turn in the background so a slow database never slows a reply. | `guardrail/events.py`, `event_store.py` |
+| Pipeline | Runs the steps above in order, for normal and streamed replies. | `guardrail/pipeline.py` |
+
+### Benchmark (tests chatbots)
+
+| Component | What it does | Code |
+|---|---|---|
+| Personas, scenarios, rubric | The test material: who is talking, what they want, and how replies are scored. | `data/`, `schemas.py`, `loader.py` |
+| Persona simulator | An AI plays the pretend user and keeps pushing the chatbot to agree. | `benchmark/simulator.py` |
+| Conversation engine | A loop: user speaks, chatbot replies, repeat for the set number of turns. | `benchmark/conversation.py` |
+| Judge | Scores every chatbot reply on each measure. It only sees the conversation up to the turn it is scoring. | `benchmark/judge.py` |
+| Scoring | The maths: weighted score, drift, gap between vulnerable and control users. | `scoring.py` |
+| Runner | Runs many conversations at once, saves each step, and can stop and resume. | `benchmark/runner.py` |
+| Reports | Leaderboard, per-persona scores, per-language scores, guardrail off against on. | `benchmark/report.py` |
+| Judge validation | Makes blind labelling sheets for people and measures how well the judge agrees with them. | `validation/` |
+
+### Platform (everything around them)
+
+| Component | What it does | Code |
+|---|---|---|
+| Model layer | One interface for every model. Paces calls to stay under free-tier limits and retries when the provider is busy. | `llm/` |
+| API layer | The OpenAI-compatible chat endpoint and the endpoints the dashboard uses. | `api/` |
+| Keys and roles | Each API key belongs to one tenant and has one role. Keys are stored as hashes. | `tenancy/repository.py`, `roles.py` |
+| Rate limiter | Caps requests per tenant per minute. | `api/ratelimit.py` |
+| Audit log | Records who changed a policy, reviewed a flag or made a key. Add-only. | `tenancy/audit.py` |
+| Masking | Hides emails, phone numbers, card and ID numbers before text is stored. | `privacy/redaction.py` |
+| Database layer | Tables and migrations. SQLite on a laptop, PostgreSQL in production, same code. | `db/`, `migrations/` |
+| Dashboard | Overview, flagged conversations with review buttons, benchmark results, policy editor. | `dashboard/` |
+| Command line tool | `mirrorguard`: validate, bench, labels, serve, tenants, keys, db, retention. | `cli.py`, `commands/` |
 
 ## Tech stack
 
-| Layer | Choice |
-|---|---|
-| Backend | Python, FastAPI, one app with clear modules |
-| Agent flows | LangGraph (conversation engine, judge, reply check and rewrite) |
-| LLM access | LiteLLM, with Groq's free API |
-| Database | SQLite locally, PostgreSQL in production (SQLAlchemy, Alembic) |
-| Shared state | Redis (session risk, rate limits) |
-| Dashboard | Next.js, TypeScript, Tailwind CSS |
-| Running it | Docker Compose |
-| Checks | pytest, ruff, GitHub Actions, k6 |
+| Layer | Technology | What it is used for here |
+|---|---|---|
+| Language | Python 3.12 | The whole backend |
+| Web framework | FastAPI, Uvicorn | The API server, including streamed replies |
+| Agent flows | LangGraph | The three multi-step AI flows: conversation loop, judge, reply check and rewrite |
+| Model access | LiteLLM | One way to call any provider, so changing models is a settings change |
+| Model provider | Groq (free tier) | Chatbots under test, judge, risk scorer and rewriter |
+| Data shapes | Pydantic, pydantic-settings | Checking personas, scenarios, API requests and settings |
+| Database | PostgreSQL (SQLite locally) | Events, reviews, policies, keys, audit log, benchmark runs |
+| Database access | SQLAlchemy (async), asyncpg, aiosqlite | One set of queries for both databases |
+| Migrations | Alembic | Creating and updating tables safely |
+| Shared state | Redis | Session risk and rate limits, shared by every server copy |
+| Dashboard | Next.js 16, React 19, TypeScript | The web app |
+| Styling | Tailwind CSS 4 | Dashboard layout, light and dark themes |
+| Test material | YAML | Personas, scenarios and the rubric, editable without code |
+| Tests | pytest, pytest-asyncio, fakeredis, httpx | 245 automated tests |
+| Code quality | Ruff, ESLint, TypeScript | Lint and format for Python, lint and types for the dashboard |
+| Load testing | k6 | Measuring the guardrail's own cost per reply |
+| Packaging | uv, Hatchling | Installing and building the Python package |
+| Containers | Docker, Docker Compose | Running database, cache, API and dashboard together |
+| Automatic checks | GitHub Actions | Lint, tests and dashboard build on every push |
+
+Where LangGraph is **not** used: the fast guardrail path for low and medium risk is plain Python, because it is one quick model call plus simple rules.
+
+More detail, including how the system scales, is in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## What is in this repository
 

@@ -2,7 +2,7 @@
 
 MirrorGuard is one backend application with clear internal modules, one background worker and a web dashboard. Think of it as a checkpoint standing between the user and the chatbot.
 
-![MirrorGuard architecture](images/architecture.png)
+The full diagrams (whole system, one chat turn, one benchmark conversation) are in the [README](../README.md#architecture).
 
 ## The two paths
 

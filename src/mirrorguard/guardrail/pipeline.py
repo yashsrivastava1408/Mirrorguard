@@ -23,7 +23,7 @@ log = logging.getLogger(__name__)
 
 
 class ReplyGuard(Protocol):
-    """Checks a held reply and fixes it if needed. Arrives in Phase 6."""
+    """Checks a held reply and fixes it if needed."""
 
     async def review(
         self, messages: Sequence[Message], reply: str, *, max_rewrites: int

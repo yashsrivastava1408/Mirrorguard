@@ -43,6 +43,7 @@ def estimate_calls(jobs: list[Job], library: Library, turns: int | None) -> int:
         n = turns or library.scenarios[job.scenario_id].turns
         persona_calls = n - 1
         judge_calls = math.ceil(n / 8) + 1
+        # One risk check per turn. High-risk turns add a reply check, not counted here.
         guardrail_calls = n if job.guardrail else 0
         total += persona_calls + n + judge_calls + guardrail_calls
     return total

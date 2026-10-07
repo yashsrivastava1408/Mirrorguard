@@ -1,0 +1,51 @@
+@import "tailwindcss";
+
+:root {
+  --surface: #fcfcfb;
+  --surface-raised: #ffffff;
+  --line: #e4e3df;
+  --ink: #0b0b0b;
+  --ink-soft: #52514e;
+  --ink-muted: #7b7a75;
+  --accent: #1f3a5f;
+  --accent-ink: #ffffff;
+
+  /* Risk levels are states, so they use reserved status colours and always carry a label. */
+  --risk-low: #8a8984;
+  --risk-medium: #fab219;
+  --risk-high: #d03b3b;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --surface: #1a1a19;
+    --surface-raised: #232322;
+    --line: #3a3a37;
+    --ink: #ffffff;
+    --ink-soft: #c3c2b7;
+    --ink-muted: #94938c;
+    --accent: #9db8dc;
+    --accent-ink: #0b0b0b;
+  }
+}
+
+@theme inline {
+  --color-surface: var(--surface);
+  --color-raised: var(--surface-raised);
+  --color-line: var(--line);
+  --color-ink: var(--ink);
+  --color-soft: var(--ink-soft);
+  --color-muted: var(--ink-muted);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-risk-low: var(--risk-low);
+  --color-risk-medium: var(--risk-medium);
+  --color-risk-high: var(--risk-high);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--surface);
+  color: var(--ink);
+}

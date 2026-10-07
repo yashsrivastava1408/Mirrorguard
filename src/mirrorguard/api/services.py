@@ -4,14 +4,17 @@ from dataclasses import dataclass
 
 from mirrorguard.api.auth import Authenticator, StaticAuthenticator
 from mirrorguard.api.ratelimit import MemoryRateLimiter, RateLimiter, RedisRateLimiter
+from mirrorguard.benchmark.repository import BenchmarkRepository
 from mirrorguard.config import Settings
 from mirrorguard.db import Database
 from mirrorguard.guardrail.event_store import EventRepository
 from mirrorguard.guardrail.events import QueueSink
 from mirrorguard.guardrail.factory import build_guardrail
 from mirrorguard.guardrail.pipeline import Guardrail
+from mirrorguard.guardrail.policy_store import DatabasePolicyStore
 from mirrorguard.guardrail.session import MemorySessionStore, RedisSessionStore, SessionStore
 from mirrorguard.llm.factory import ModelFactory, make_model_factory
+from mirrorguard.loader import Library, load_library
 
 
 @dataclass
@@ -24,6 +27,9 @@ class Services:
     rate_limiter: RateLimiter
     database: Database | None = None
     events: EventRepository | None = None
+    policies: DatabasePolicyStore | None = None
+    benchmarks: BenchmarkRepository | None = None
+    library: Library | None = None
     sink: QueueSink | None = None
     redis: object | None = None
 
@@ -48,6 +54,7 @@ def build_services(settings: Settings) -> Services:
     database = Database(settings.database_url)
     events = EventRepository(database)
     sink = QueueSink(events.save)
+    policies = DatabasePolicyStore(database)
 
     redis = None
     if settings.redis_url:
@@ -63,12 +70,17 @@ def build_services(settings: Settings) -> Services:
     return Services(
         settings=settings,
         models=models,
-        guardrail=build_guardrail(settings, models, sessions=sessions, events=sink),
+        guardrail=build_guardrail(
+            settings, models, sessions=sessions, policies=policies, events=sink
+        ),
         sessions=sessions,
         authenticator=StaticAuthenticator(settings.api_keys),
         rate_limiter=rate_limiter,
         database=database,
         events=events,
+        policies=policies,
+        benchmarks=BenchmarkRepository(database),
+        library=load_library(),
         sink=sink,
         redis=redis,
     )

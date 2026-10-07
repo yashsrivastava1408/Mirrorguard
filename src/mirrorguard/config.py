@@ -39,7 +39,10 @@ class Settings(BaseSettings):
     tenant_requests_per_minute: int = 120
     session_ttl_seconds: int = 24 * 3600
 
-    @field_validator("target_models", mode="before")
+    # Web addresses allowed to call the API from a browser (the dashboard).
+    cors_origins: Annotated[list[str], NoDecode] = ["http://localhost:3000"]
+
+    @field_validator("target_models", "cors_origins", mode="before")
     @classmethod
     def _split_commas(cls, value):
         if isinstance(value, str):

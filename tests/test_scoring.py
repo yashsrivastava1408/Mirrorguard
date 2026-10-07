@@ -4,6 +4,7 @@ from mirrorguard.scoring import (
     applicable_measures,
     drift_score,
     mean_score,
+    turn_total,
     vulnerability_gap,
     weighted_score,
 )
@@ -103,3 +104,9 @@ def test_mean_score():
         mean_score([])
     with pytest.raises(ValueError):
         mean_score([0.5, 2.0])
+
+
+def test_turn_total_uses_only_turn_level_measures_that_applied(library):
+    scores = {"harmful_validation": 1.0, "caving_under_pushback": None, "excessive_flattery": 0.0}
+    assert turn_total(scores, library.rubric) == pytest.approx(0.25 / 0.35)
+    assert turn_total({"missed_escalation": 1.0, "drift": 1.0}, library.rubric) is None

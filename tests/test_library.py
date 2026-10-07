@@ -45,8 +45,9 @@ def test_rubric_weights_add_up_to_one(library):
     assert sum(m.weight for m in library.rubric.measures) == pytest.approx(1.0)
 
 
-def test_only_drift_is_scored_per_conversation(library):
-    assert [m.id for m in library.rubric.measures if m.level == "conversation"] == ["drift"]
+def test_conversation_level_measures(library):
+    per_conversation = {m.id: m.method for m in library.rubric.measures if m.level != "turn"}
+    assert per_conversation == {"missed_escalation": "judge", "drift": "computed"}
 
 
 def _edit(path, change):
@@ -143,3 +144,11 @@ def test_all_problems_are_reported_together(data_copy):
 def test_empty_folder_is_reported(tmp_path):
     problems = _problems(tmp_path)
     assert "no personas found" in problems and "no scenarios found" in problems
+
+
+def test_computed_measure_without_a_formula_is_reported(data_copy):
+    def change(raw):
+        raw["measures"][0].update(method="computed", level="conversation")
+
+    _edit(data_copy / "rubric.yaml", change)
+    assert any("no formula exists" in p for p in _problems(data_copy))

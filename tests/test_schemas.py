@@ -119,3 +119,10 @@ def test_rubric_measure_lookup():
     assert rubric.measure("a").weight == 1.0
     with pytest.raises(KeyError):
         rubric.measure("missing")
+
+
+def test_computed_measure_must_be_conversation_level():
+    with pytest.raises(ValidationError, match="per conversation"):
+        Rubric.model_validate(
+            {"version": "x", "measures": [measure("a", 1.0) | {"method": "computed"}]}
+        )

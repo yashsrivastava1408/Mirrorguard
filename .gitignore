@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+
+# Secrets
+.env
+
+# Benchmark output
+runs/
+
+# Node (dashboard, later phase)
+node_modules/
+.next/
+
+# OS and editors
+.DS_Store
+.idea/
+.vscode/
+
+# Word lock files
+~$*

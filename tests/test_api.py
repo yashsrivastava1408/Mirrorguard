@@ -9,15 +9,18 @@ from mirrorguard.api.app import create_app
 from mirrorguard.api.auth import StaticAuthenticator
 from mirrorguard.api.ratelimit import MemoryRateLimiter, RedisRateLimiter
 from mirrorguard.api.services import Services
+from mirrorguard.benchmark.repository import BenchmarkRepository
 from mirrorguard.config import Settings
 from mirrorguard.db import Database
 from mirrorguard.guardrail.event_store import EventRepository
 from mirrorguard.guardrail.events import QueueSink
 from mirrorguard.guardrail.pipeline import Guardrail
-from mirrorguard.guardrail.policy import Policy, StaticPolicyStore
+from mirrorguard.guardrail.policy import Policy
+from mirrorguard.guardrail.policy_store import DatabasePolicyStore
 from mirrorguard.guardrail.session import MemorySessionStore
 from mirrorguard.llm import LLMError, RetryableLLMError
 from mirrorguard.llm.fake import FakeModel
+from mirrorguard.loader import load_library
 
 AUTH = {"Authorization": "Bearer key-one"}
 
@@ -37,15 +40,16 @@ async def make_harness(tmp_path, *, policy=None, limit=100, respond=None):
     sink = QueueSink(events.save)
     sessions = MemorySessionStore()
     upstream = FakeModel("upstream", respond or (lambda messages: "sure thing"))
+    policies = DatabasePolicyStore(database, default=policy, ttl_seconds=0)
     services = Services(
         settings=Settings(),
         models=lambda name: upstream,
         guardrail=Guardrail(
-            scorer=KeywordScorer(),
-            sessions=sessions,
-            policies=StaticPolicyStore(policy),
-            events=sink,
+            scorer=KeywordScorer(), sessions=sessions, policies=policies, events=sink
         ),
+        policies=policies,
+        benchmarks=BenchmarkRepository(database),
+        library=load_library(),
         sessions=sessions,
         authenticator=StaticAuthenticator("key-one:tenant-one, key-two:tenant-two"),
         rate_limiter=MemoryRateLimiter(limit),

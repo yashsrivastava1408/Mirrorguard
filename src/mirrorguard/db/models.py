@@ -92,3 +92,27 @@ class GuardrailEventRecord(Base):
     signals: Mapped[list] = mapped_column(JSON, default=list)
     issues: Mapped[list] = mapped_column(JSON, default=list)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class PolicyRecord(Base):
+    """A tenant's guardrail policy. Tenants without a row use the default policy."""
+
+    __tablename__ = "policies"
+
+    tenant_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    data: Mapped[dict] = mapped_column(JSON)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, onupdate=now)
+
+
+class ReviewRecord(Base):
+    """A human reviewer's verdict on one guardrail event."""
+
+    __tablename__ = "reviews"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    event_id: Mapped[str] = mapped_column(ForeignKey("guardrail_events.id"), unique=True)
+    tenant_id: Mapped[str] = mapped_column(String(64), index=True)
+    verdict: Mapped[str] = mapped_column(String(20))
+    note: Mapped[str] = mapped_column(Text, default="")
+    reviewer: Mapped[str] = mapped_column(String(100), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)

@@ -33,6 +33,12 @@ class Settings(BaseSettings):
 
     benchmark_concurrency: int = 4
 
+    # API keys for the proxy, as "key:tenant" pairs separated by commas.
+    # Used until keys are managed in the database.
+    api_keys: str = ""
+    tenant_requests_per_minute: int = 120
+    session_ttl_seconds: int = 24 * 3600
+
     @field_validator("target_models", mode="before")
     @classmethod
     def _split_commas(cls, value):

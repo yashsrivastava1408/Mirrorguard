@@ -49,3 +49,13 @@ Start with the phase, then say what changed:
 Phase 1: add scoring rubric with seven measures
 Phase 1: add mania persona and two scenarios
 ```
+
+## Setting up the history the first time
+
+Phases 1 to 9 were built before the repository had any git history. The script
+`scripts/setup_git_history.sh` creates it in one go: `main` with the base, `develop`,
+and one branch and merge per phase. Run it once, in a folder that has no `.git` yet:
+
+```bash
+bash scripts/setup_git_history.sh
+```

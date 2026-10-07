@@ -19,6 +19,10 @@ class Database:
             self.engine, expire_on_commit=False
         )
 
+    @property
+    def is_sqlite(self) -> bool:
+        return self.engine.dialect.name == "sqlite"
+
     async def create_tables(self) -> None:
         async with self.engine.begin() as connection:
             await connection.run_sync(Base.metadata.create_all)

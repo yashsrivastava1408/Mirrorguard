@@ -31,19 +31,42 @@ Both paths use the same judge and the same scoring rules. That is why the benchm
 
 ## Modules
 
-| Module | Job | Built in phase |
+| Module | Job | Code |
 |---|---|---|
-| Rubric, personas, scenarios | The test material and scoring rules | 1 |
-| Persona simulator | Plays the pretend user | 2 |
-| Judge | Scores conversations | 2 |
-| Benchmark runner | Runs and tracks benchmark jobs | 2 |
-| Risk scorer | Reads the user message and sets the risk level | 4 |
-| Policy engine | Picks the action for each risk level | 4 |
-| Steering module | Adds honesty instructions to the prompt | 4 |
-| Guardrail proxy | OpenAI-compatible endpoint that runs the live flow | 4 |
-| Reply checker and rewriter | Checks and fixes replies in high-risk sessions | 6 |
-| Dashboard | Scores, flagged conversations, review queue | 7 |
-| Auth, tenants, audit log, PII redaction | Enterprise features | 8 |
+| Rubric, personas, scenarios | The test material and scoring rules | `data/`, `schemas.py`, `loader.py`, `scoring.py` |
+| Model layer | One interface for every model, with pacing and retries | `llm/` |
+| Persona simulator | Plays the pretend user | `benchmark/simulator.py` |
+| Conversation engine | Runs one conversation (LangGraph) | `benchmark/conversation.py` |
+| Judge | Scores conversations (LangGraph) | `benchmark/judge.py` |
+| Benchmark runner | Runs and resumes benchmark jobs | `benchmark/runner.py` |
+| Judge validation | Compares the judge with human labels | `validation/` |
+| Risk scorer | Reads the user message and sets the risk level | `guardrail/risk.py` |
+| Policy engine | Picks the action for each risk level | `guardrail/policy.py`, `policy_store.py` |
+| Steering module | Adds honesty instructions to the prompt | `guardrail/steering.py` |
+| Reply guard | Checks and rewrites held replies (LangGraph) | `guardrail/reply_guard.py` |
+| Session memory | Recent risk per chat session | `guardrail/session.py` |
+| Events | Saves each guarded turn in the background | `guardrail/events.py`, `event_store.py` |
+| Guardrail pipeline | Ties the guardrail steps together | `guardrail/pipeline.py` |
+| API | OpenAI-compatible proxy and dashboard endpoints | `api/` |
+| Tenants, keys, roles, audit | Who may do what, and who did what | `tenancy/` |
+| Masking | Hides personal details before storage | `privacy/` |
+| Dashboard | The web app | `dashboard/` |
+
+## How the code is kept clean
+
+- **Every outside thing sits behind a small interface.** Models (`ChatModel`), session storage (`SessionStore`), rate limits (`RateLimiter`), event storage (`EventSink`), policies (`PolicyStore`), key checks (`Authenticator`) and masking (`Redactor`) each have one. Tests use simple stand-ins; production uses Groq, Redis and PostgreSQL. Swapping one never touches the logic.
+- **Only repositories talk to the database.** The rest of the code never writes a query.
+- **Everything is built in one place.** `api/services.py` and `guardrail/factory.py` wire the parts together from settings.
+- **Settings come from the environment**, never from code.
+
+## What makes it scale
+
+- **Server copies share nothing in memory.** With `MG_REDIS_URL` set, session risk and rate limits live in Redis, so any copy can serve any request.
+- **Saving is off the request path.** Events go to a bounded background queue. A slow database cannot slow a chat reply.
+- **Hot lookups are cached briefly.** Policies (15 seconds) and API keys (30 seconds) are not fetched from the database on every request.
+- **Model calls share one rate limit**, with retries and backoff, so a provider limit slows the system instead of breaking it.
+- **Benchmark runs are resumable.** Every step is saved, so a run can be stopped, restarted or spread over days.
+- **Counting is done by the database**, with indexes on the columns the dashboard filters by.
 
 ## Outside pieces
 
@@ -51,8 +74,8 @@ Both paths use the same judge and the same scoring rules. That is why the benchm
 |---|---|
 | LiteLLM | One door to all LLMs, so switching models is a config change |
 | Groq API | Free LLM access while building |
-| PostgreSQL | All saved data |
-| Redis | Session risk, rate limits, job queue |
+| PostgreSQL | All saved data (SQLite for local use) |
+| Redis | Session risk and rate limits |
 
 ## Where LangGraph is used
 

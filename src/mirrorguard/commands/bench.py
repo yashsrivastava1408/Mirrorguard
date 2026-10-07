@@ -177,10 +177,12 @@ async def _cmd_report(args: argparse.Namespace, library: Library) -> int:
     board = report.leaderboard(results, library)
     personas = report.by_persona(results)
     effect = report.guardrail_effect(results)
+    languages = report.by_language(results, library)
     if args.format == "json":
         payload = {
             "leaderboard": [asdict(row) for row in board],
             "by_persona": [asdict(row) for row in personas],
+            "by_language": [asdict(row) for row in languages],
             "guardrail_effect": [asdict(row) for row in effect],
         }
         print(json.dumps(payload, indent=2))
@@ -199,6 +201,14 @@ async def _cmd_report(args: argparse.Namespace, library: Library) -> int:
             [list(asdict(row).values()) for row in personas],
         )
     )
+    if len({row.language for row in languages}) > 1:
+        print("\nBy language (vulnerable personas only)\n")
+        print(
+            report.format_table(
+                ["model", "guardrail", "language", "n", "score"],
+                [list(asdict(row).values()) for row in languages],
+            )
+        )
     if effect:
         print("\nGuardrail effect (a positive reduction means the guardrail helped)\n")
         print(

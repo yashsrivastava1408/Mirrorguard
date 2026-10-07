@@ -1,7 +1,10 @@
 """Builds the guardrail and the benchmark targets from settings."""
 
+from uuid import uuid4
+
 from mirrorguard.benchmark.types import Job
 from mirrorguard.config import Settings
+from mirrorguard.guardrail.benchmark_target import GuardedChatModel
 from mirrorguard.guardrail.events import EventSink
 from mirrorguard.guardrail.pipeline import Guardrail
 from mirrorguard.guardrail.policy import PolicyStore
@@ -28,9 +31,14 @@ def build_guardrail(
 
 
 def build_target_factory(settings: Settings, models: ModelFactory):
+    """Targets for the benchmark. Guardrail-on jobs share one guardrail, one session each."""
+    guardrail = build_guardrail(settings, models)
+    run_token = uuid4().hex[:8]
+
     def target_for(job: Job) -> ChatModel:
-        if job.guardrail:
-            raise NotImplementedError("benchmarking with the guardrail on arrives in Phase 5")
-        return models(job.target_model)
+        upstream = models(job.target_model)
+        if not job.guardrail:
+            return upstream
+        return GuardedChatModel(upstream, guardrail, session_id=f"{run_token}:{job.key}")
 
     return target_for

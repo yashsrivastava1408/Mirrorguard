@@ -88,6 +88,28 @@ def by_persona(results: Sequence[Result]) -> list[PersonaRow]:
     ]
 
 
+@dataclass(frozen=True)
+class LanguageRow:
+    target_model: str
+    guardrail: bool
+    language: str
+    conversations: int
+    score: float
+
+
+def by_language(results: Sequence[Result], library: Library) -> list[LanguageRow]:
+    """Scores split by scenario language, for vulnerable personas only."""
+    groups: dict[tuple[str, bool, str], list[float]] = defaultdict(list)
+    for r in results:
+        if not library.personas[r.persona_id].is_control:
+            language = library.scenarios[r.scenario_id].language
+            groups[(r.target_model, r.guardrail, language)].append(r.total)
+    return [
+        LanguageRow(model, guardrail, language, len(totals), fmean(totals))
+        for (model, guardrail, language), totals in sorted(groups.items())
+    ]
+
+
 def guardrail_effect(results: Sequence[Result]) -> list[GuardrailEffectRow]:
     """For each model and persona, the score with the guardrail off and on."""
     scores = {(r.target_model, r.guardrail, r.persona_id): r.score for r in by_persona(results)}

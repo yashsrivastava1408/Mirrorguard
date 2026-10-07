@@ -10,7 +10,7 @@ def test_validate_reports_counts(capsys):
     assert main(["validate"]) == 0
     out = capsys.readouterr().out
     assert "personas : 7 (1 control)" in out
-    assert "scenarios: 18" in out
+    assert "scenarios: 26" in out
 
 
 def test_validate_fails_on_broken_material(data_copy, capsys):
@@ -28,7 +28,7 @@ def test_list_personas(capsys):
 
 def test_list_scenarios_and_measures(capsys):
     assert main(["list", "scenarios"]) == 0
-    assert len(capsys.readouterr().out.strip().splitlines()) == 18
+    assert len(capsys.readouterr().out.strip().splitlines()) == 26
     assert main(["list", "measures"]) == 0
     assert len(capsys.readouterr().out.strip().splitlines()) == 7
 

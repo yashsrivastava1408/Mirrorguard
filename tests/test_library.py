@@ -9,7 +9,7 @@ from mirrorguard.schemas import VulnerabilityState
 
 def test_real_library_loads(library):
     assert len(library.personas) == 7
-    assert len(library.scenarios) == 18
+    assert len(library.scenarios) == 26
     assert len(library.rubric.measures) == 7
 
 
@@ -22,19 +22,32 @@ def test_exactly_one_control_persona(library):
     assert [p.id for p in library.personas.values() if p.is_control] == ["control_healthy"]
 
 
-def test_every_vulnerable_persona_has_two_scenarios_and_a_control(library):
+def english(scenarios):
+    return [s for s in scenarios if s.language == "en"]
+
+
+def test_every_vulnerable_persona_has_two_english_scenarios_and_a_control(library):
     for persona in library.personas.values():
         if persona.is_control:
             continue
-        scenarios = library.scenarios_for(persona.id)
+        scenarios = english(library.scenarios_for(persona.id))
         assert len(scenarios) == 2, persona.id
         assert sum(1 for s in scenarios if s.matched_control) == 1, persona.id
 
 
-def test_every_control_scenario_is_used_once(library):
-    controls = {s.id for s in library.scenarios_for("control_healthy")}
-    used = [s.matched_control for s in library.scenarios.values() if s.matched_control]
+def test_every_english_control_scenario_is_used_once(library):
+    controls = {s.id for s in english(library.scenarios_for("control_healthy"))}
+    used = [s.matched_control for s in english(library.scenarios.values()) if s.matched_control]
     assert sorted(used) == sorted(controls)
+
+
+def test_hinglish_pack_covers_every_vulnerable_persona(library):
+    pack = [s for s in library.scenarios.values() if s.language == "hi-en"]
+    vulnerable = {p.id for p in library.personas.values() if not p.is_control}
+    assert {s.persona_id for s in pack} - {"control_healthy"} == vulnerable
+    for scenario in pack:
+        if scenario.matched_control:
+            assert library.scenarios[scenario.matched_control].language == "hi-en"
 
 
 def test_control_scenarios_never_expect_escalation(library):
@@ -87,11 +100,13 @@ def test_matched_control_must_be_played_by_control_persona(data_copy):
 
 
 def test_persona_without_scenarios_is_reported(data_copy):
+    (data_copy / "scenarios" / "hinglish.yaml").unlink()  # it also has mania scenarios
     (data_copy / "scenarios" / "mania.yaml").unlink()
     assert "persona 'mania': has no scenarios" in _problems(data_copy)
 
 
 def test_persona_without_matched_control_is_reported(data_copy):
+    (data_copy / "scenarios" / "hinglish.yaml").unlink()  # it also has mania scenarios
     _edit(
         data_copy / "scenarios" / "mania.yaml",
         lambda raw: raw["scenarios"][0].pop("matched_control"),
@@ -136,6 +151,7 @@ def test_broken_yaml_is_reported(data_copy):
 
 
 def test_all_problems_are_reported_together(data_copy):
+    (data_copy / "scenarios" / "hinglish.yaml").unlink()  # it also has mania scenarios
     (data_copy / "rubric.yaml").unlink()
     (data_copy / "scenarios" / "mania.yaml").unlink()
     assert len(_problems(data_copy)) == 2
@@ -152,3 +168,11 @@ def test_computed_measure_without_a_formula_is_reported(data_copy):
 
     _edit(data_copy / "rubric.yaml", change)
     assert any("no formula exists" in p for p in _problems(data_copy))
+
+
+def test_matched_control_in_another_language_is_reported(data_copy):
+    _edit(
+        data_copy / "scenarios" / "hinglish.yaml",
+        lambda raw: raw["scenarios"][0].update(matched_control="ctl_planned_job_change"),
+    )
+    assert any("different language" in p for p in _problems(data_copy))

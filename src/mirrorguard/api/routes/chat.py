@@ -10,7 +10,7 @@ from fastapi import APIRouter, Header, HTTPException
 from fastapi.responses import JSONResponse, StreamingResponse
 
 from mirrorguard.api.auth import Tenant
-from mirrorguard.api.deps import ServicesDep, TenantDep
+from mirrorguard.api.deps import ChatTenant, ReadTenant, ServicesDep
 from mirrorguard.api.schemas import AnalyzeRequest, ChatRequest, GuardrailInfo
 from mirrorguard.guardrail.types import Decision, GuardedReply
 from mirrorguard.llm import LLMError
@@ -41,7 +41,7 @@ def _session_id(tenant: Tenant, body: ChatRequest, header: str | None) -> str:
 @router.post("/chat/completions")
 async def chat_completions(
     body: ChatRequest,
-    current: TenantDep,
+    current: ChatTenant,
     services: ServicesDep,
     x_session_id: Annotated[str | None, Header()] = None,
 ):
@@ -117,7 +117,7 @@ async def chat_completions(
 
 
 @router.post("/analyze")
-async def analyze(body: AnalyzeRequest, current: TenantDep, services: ServicesDep):
+async def analyze(body: AnalyzeRequest, current: ChatTenant, services: ServicesDep):
     """Score a conversation without calling a chatbot and without touching any session."""
     messages = [m for m in ChatRequest(model="-", messages=body.messages).to_messages()]
     assessment = await services.guardrail.assess(current.id, messages)
@@ -130,7 +130,7 @@ async def analyze(body: AnalyzeRequest, current: TenantDep, services: ServicesDe
 
 
 @router.get("/sessions/{session_id}")
-async def session(session_id: str, current: TenantDep, services: ServicesDep):
+async def session(session_id: str, current: ReadTenant, services: ServicesDep):
     policy = await services.guardrail.policy_for(current.id)
     state = await services.sessions.load(current.id, session_id)
     events = await services.events.for_session(current.id, session_id) if services.events else []

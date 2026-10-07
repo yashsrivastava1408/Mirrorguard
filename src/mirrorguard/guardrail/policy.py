@@ -29,6 +29,9 @@ class Policy(BaseModel):
     # A raised risk level stays in force for this many turns.
     session_window: int = Field(default=6, ge=1, le=50)
 
+    # When false, message text is never saved. Only risk levels and actions are kept.
+    store_text: bool = True
+
     max_rewrites: int = Field(default=1, ge=0, le=3)
     crisis_message: str = DEFAULT_CRISIS_MESSAGE
     allowed_models: list[str] | None = None

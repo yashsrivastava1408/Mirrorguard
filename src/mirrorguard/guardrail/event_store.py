@@ -2,16 +2,26 @@
 
 from datetime import datetime
 
-from sqlalchemy import Integer, cast, func, select
+from sqlalchemy import Integer, cast, delete, func, select
 
 from mirrorguard.db import Database
 from mirrorguard.db.models import GuardrailEventRecord, ReviewRecord
 from mirrorguard.guardrail.types import GuardrailEvent
+from mirrorguard.privacy.redaction import NoRedactor, Redactor
+
+NOT_STORED = "[not stored]"
 
 
 class EventRepository:
-    def __init__(self, database: Database):
+    def __init__(self, database: Database, *, redactor: Redactor | None = None):
         self._db = database
+        self._redactor = redactor or NoRedactor()
+
+    def _text(self, event: GuardrailEvent, text: str | None) -> str | None:
+        """Text as it may be stored: withheld, or with personal details masked."""
+        if text is None:
+            return None
+        return self._redactor.redact(text) if event.store_text else NOT_STORED
 
     async def save(self, event: GuardrailEvent) -> None:
         async with self._db.session() as session, session.begin():
@@ -20,9 +30,9 @@ class EventRepository:
                     tenant_id=event.tenant_id,
                     session_id=event.session_id,
                     model=event.model,
-                    user_message=event.user_message,
-                    reply=event.reply,
-                    original_reply=event.original_reply,
+                    user_message=self._text(event, event.user_message),
+                    reply=self._text(event, event.reply),
+                    original_reply=self._text(event, event.original_reply),
                     risk_level=event.risk_level,
                     session_level=event.session_level,
                     action=event.action,
@@ -158,3 +168,13 @@ class EventRepository:
                 "reviews": dict(reviews.all()),
                 "timeline": [{"hour": bucket, **counts} for bucket, counts in hours.items()],
             }
+
+    async def purge_older_than(self, cutoff: datetime) -> int:
+        """Delete events (and their reviews) created before `cutoff`. Returns how many."""
+        old = select(GuardrailEventRecord.id).where(GuardrailEventRecord.created_at < cutoff)
+        async with self._db.session() as session, session.begin():
+            await session.execute(delete(ReviewRecord).where(ReviewRecord.event_id.in_(old)))
+            result = await session.execute(
+                delete(GuardrailEventRecord).where(GuardrailEventRecord.created_at < cutoff)
+            )
+            return result.rowcount

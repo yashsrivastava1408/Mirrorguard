@@ -6,7 +6,7 @@ import pytest
 from test_guardrail import KeywordScorer
 
 from mirrorguard.api.app import create_app
-from mirrorguard.api.auth import StaticAuthenticator
+from mirrorguard.api.auth import ChainAuthenticator, StaticAuthenticator
 from mirrorguard.api.ratelimit import MemoryRateLimiter, RedisRateLimiter
 from mirrorguard.api.services import Services
 from mirrorguard.benchmark.repository import BenchmarkRepository
@@ -21,6 +21,9 @@ from mirrorguard.guardrail.session import MemorySessionStore
 from mirrorguard.llm import LLMError, RetryableLLMError
 from mirrorguard.llm.fake import FakeModel
 from mirrorguard.loader import load_library
+from mirrorguard.privacy.redaction import PatternRedactor
+from mirrorguard.tenancy.audit import AuditLog
+from mirrorguard.tenancy.repository import DatabaseAuthenticator, TenantRepository
 
 AUTH = {"Authorization": "Bearer key-one"}
 
@@ -36,8 +39,9 @@ class Harness:
 
 async def make_harness(tmp_path, *, policy=None, limit=100, respond=None):
     database = Database(f"sqlite+aiosqlite:///{tmp_path / 'api.db'}")
-    events = EventRepository(database)
+    events = EventRepository(database, redactor=PatternRedactor())
     sink = QueueSink(events.save)
+    tenants = TenantRepository(database)
     sessions = MemorySessionStore()
     upstream = FakeModel("upstream", respond or (lambda messages: "sure thing"))
     policies = DatabasePolicyStore(database, default=policy, ttl_seconds=0)
@@ -51,7 +55,14 @@ async def make_harness(tmp_path, *, policy=None, limit=100, respond=None):
         benchmarks=BenchmarkRepository(database),
         library=load_library(),
         sessions=sessions,
-        authenticator=StaticAuthenticator("key-one:tenant-one, key-two:tenant-two"),
+        authenticator=ChainAuthenticator(
+            [
+                StaticAuthenticator("key-one:tenant-one, key-two:tenant-two"),
+                DatabaseAuthenticator(tenants, ttl_seconds=0),
+            ]
+        ),
+        tenants=tenants,
+        audit=AuditLog(database),
         rate_limiter=MemoryRateLimiter(limit),
         database=database,
         events=events,

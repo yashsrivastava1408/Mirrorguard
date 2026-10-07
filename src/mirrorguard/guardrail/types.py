@@ -1,6 +1,6 @@
 """Plain data used across the guardrail."""
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import IntEnum, StrEnum
 
 
@@ -77,4 +77,4 @@ class GuardrailEvent:
     issues: tuple[str, ...] = ()
     original_reply: str | None = None
     from_fallback: bool = False
-    extra: dict = field(default_factory=dict)
+    store_text: bool = True  # False for tenants who do not want message text kept

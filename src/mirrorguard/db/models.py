@@ -116,3 +116,43 @@ class ReviewRecord(Base):
     note: Mapped[str] = mapped_column(Text, default="")
     reviewer: Mapped[str] = mapped_column(String(100), default="")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class TenantRecord(Base):
+    """One customer organisation."""
+
+    __tablename__ = "tenants"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    name: Mapped[str] = mapped_column(String(200))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class ApiKeyRecord(Base):
+    """An API key. Only its hash is stored, so a database leak does not leak keys."""
+
+    __tablename__ = "api_keys"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    tenant_id: Mapped[str] = mapped_column(ForeignKey("tenants.id"), index=True)
+    key_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    prefix: Mapped[str] = mapped_column(String(12))
+    name: Mapped[str] = mapped_column(String(100), default="")
+    role: Mapped[str] = mapped_column(String(20))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
+
+
+class AuditRecord(Base):
+    """Who changed what. Rows are only ever added, never changed or deleted."""
+
+    __tablename__ = "audit_log"
+    __table_args__ = (Index("ix_audit_tenant_time", "tenant_id", "created_at"),)
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    tenant_id: Mapped[str] = mapped_column(String(64))
+    actor: Mapped[str] = mapped_column(String(100))
+    action: Mapped[str] = mapped_column(String(50))
+    target: Mapped[str] = mapped_column(String(200), default="")
+    detail: Mapped[dict] = mapped_column(JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)

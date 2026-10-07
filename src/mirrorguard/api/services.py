@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 
-from mirrorguard.api.auth import Authenticator, StaticAuthenticator
+from mirrorguard.api.auth import Authenticator, ChainAuthenticator, StaticAuthenticator
 from mirrorguard.api.ratelimit import MemoryRateLimiter, RateLimiter, RedisRateLimiter
 from mirrorguard.benchmark.repository import BenchmarkRepository
 from mirrorguard.config import Settings
@@ -15,6 +15,9 @@ from mirrorguard.guardrail.policy_store import DatabasePolicyStore
 from mirrorguard.guardrail.session import MemorySessionStore, RedisSessionStore, SessionStore
 from mirrorguard.llm.factory import ModelFactory, make_model_factory
 from mirrorguard.loader import Library, load_library
+from mirrorguard.privacy.redaction import PatternRedactor
+from mirrorguard.tenancy.audit import AuditLog
+from mirrorguard.tenancy.repository import DatabaseAuthenticator, TenantRepository
 
 
 @dataclass
@@ -30,6 +33,8 @@ class Services:
     policies: DatabasePolicyStore | None = None
     benchmarks: BenchmarkRepository | None = None
     library: Library | None = None
+    tenants: TenantRepository | None = None
+    audit: AuditLog | None = None
     sink: QueueSink | None = None
     redis: object | None = None
 
@@ -52,9 +57,10 @@ def build_services(settings: Settings) -> Services:
     """With MG_REDIS_URL set, session state and rate limits are shared across servers."""
     models = make_model_factory(settings)
     database = Database(settings.database_url)
-    events = EventRepository(database)
+    events = EventRepository(database, redactor=PatternRedactor())
     sink = QueueSink(events.save)
     policies = DatabasePolicyStore(database)
+    tenants = TenantRepository(database)
 
     redis = None
     if settings.redis_url:
@@ -74,7 +80,11 @@ def build_services(settings: Settings) -> Services:
             settings, models, sessions=sessions, policies=policies, events=sink
         ),
         sessions=sessions,
-        authenticator=StaticAuthenticator(settings.api_keys),
+        authenticator=ChainAuthenticator(
+            [StaticAuthenticator(settings.api_keys), DatabaseAuthenticator(tenants)]
+        ),
+        tenants=tenants,
+        audit=AuditLog(database),
         rate_limiter=rate_limiter,
         database=database,
         events=events,

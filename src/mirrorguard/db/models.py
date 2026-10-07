@@ -3,7 +3,7 @@
 from datetime import UTC, datetime
 from uuid import uuid4
 
-from sqlalchemy import JSON, DateTime, Float, ForeignKey, String, Text, UniqueConstraint
+from sqlalchemy import JSON, DateTime, Float, ForeignKey, Index, String, Text, UniqueConstraint
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -63,4 +63,32 @@ class ScoreRecord(Base):
     turn_scores: Mapped[list] = mapped_column(JSON)
     total: Mapped[float] = mapped_column(Float)
     summary: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class GuardrailEventRecord(Base):
+    """One guarded chat turn."""
+
+    __tablename__ = "guardrail_events"
+    __table_args__ = (
+        Index("ix_events_tenant_time", "tenant_id", "created_at"),
+        Index("ix_events_tenant_session", "tenant_id", "session_id"),
+    )
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    tenant_id: Mapped[str] = mapped_column(String(64))
+    session_id: Mapped[str] = mapped_column(String(128))
+    model: Mapped[str] = mapped_column(String(200))
+    user_message: Mapped[str] = mapped_column(Text)
+    reply: Mapped[str] = mapped_column(Text)
+    original_reply: Mapped[str | None] = mapped_column(Text, default=None)
+    risk_level: Mapped[str] = mapped_column(String(10), index=True)
+    session_level: Mapped[str] = mapped_column(String(10))
+    action: Mapped[str] = mapped_column(String(10))
+    shadow: Mapped[bool] = mapped_column(default=False)
+    crisis: Mapped[bool] = mapped_column(default=False)
+    rewritten: Mapped[bool] = mapped_column(default=False)
+    from_fallback: Mapped[bool] = mapped_column(default=False)
+    signals: Mapped[list] = mapped_column(JSON, default=list)
+    issues: Mapped[list] = mapped_column(JSON, default=list)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)

@@ -235,6 +235,19 @@ async def _cmd_models_check(args: argparse.Namespace, library: Library) -> int:
     return 0 if not failures else 1
 
 
+def _cmd_serve(args: argparse.Namespace, library: Library) -> int:
+    import uvicorn
+
+    uvicorn.run(
+        "mirrorguard.api.app:app_from_settings",
+        factory=True,
+        host=args.host,
+        port=args.port,
+        workers=args.workers,
+    )
+    return 0
+
+
 def _add_job_options(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--targets", help="comma-separated models (default: MG_TARGET_MODELS)")
     parser.add_argument("--scenarios", help="comma-separated scenario ids (default: all)")
@@ -251,6 +264,12 @@ def register(sub: argparse._SubParsersAction) -> None:
     models_sub.add_parser("check", help="check that every configured model answers").set_defaults(
         handler=_cmd_models_check
     )
+
+    serve = sub.add_parser("serve", help="start the guardrail API server")
+    serve.add_argument("--host", default="127.0.0.1")
+    serve.add_argument("--port", type=int, default=8000)
+    serve.add_argument("--workers", type=int, default=1, help="server processes to run")
+    serve.set_defaults(handler=_cmd_serve)
 
     bench_sub = sub.add_parser("bench", help="benchmark commands").add_subparsers(required=True)
 

@@ -8,6 +8,7 @@ from mirrorguard.guardrail.benchmark_target import GuardedChatModel
 from mirrorguard.guardrail.events import EventSink
 from mirrorguard.guardrail.pipeline import Guardrail
 from mirrorguard.guardrail.policy import PolicyStore
+from mirrorguard.guardrail.reply_guard import LLMReplyGuard
 from mirrorguard.guardrail.risk import LLMRiskScorer
 from mirrorguard.guardrail.session import SessionStore
 from mirrorguard.llm import ChatModel
@@ -27,6 +28,9 @@ def build_guardrail(
         sessions=sessions,
         policies=policies,
         events=events,
+        reply_guard=LLMReplyGuard(
+            checker=models(settings.judge_model), rewriter=models(settings.rewriter_model)
+        ),
     )
 
 

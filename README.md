@@ -4,7 +4,7 @@
 
 MirrorGuard measures how much AI chatbots over-agree with psychologically vulnerable users, and protects those users in real time.
 
-> **Status: Phases 1 to 5 are built (benchmark, guardrail, and the off-versus-on evaluation).**
+> **Status: Phases 1 to 6 are built (benchmark, guardrail with high-risk protection, evaluation).**
 > The `main` branch holds only the project base. The build lives on `develop`,
 > one phase branch at a time. See [docs/BRANCHING.md](docs/BRANCHING.md) and the notes in `docs/phases/`.
 

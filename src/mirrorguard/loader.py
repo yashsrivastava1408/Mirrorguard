@@ -131,6 +131,11 @@ def _cross_check(
                 )
             else:
                 control_persona = personas.get(control.persona_id)
+                if control.language != scenario.language:
+                    problems.append(
+                        f"scenario '{scenario.id}': matched control "
+                        f"'{control.id}' is in a different language"
+                    )
                 if control_persona is not None and not control_persona.is_control:
                     problems.append(
                         f"scenario '{scenario.id}': matched control "

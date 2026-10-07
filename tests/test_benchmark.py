@@ -185,7 +185,7 @@ async def test_judge_rejects_an_incomplete_transcript(library):
 
 def test_plan_covers_every_combination(library):
     jobs = plan_jobs(library, ["a", "b"], guardrail_modes=(False, True), repeats=2)
-    assert len(jobs) == 18 * 2 * 2 * 2
+    assert len(jobs) == len(library.scenarios) * 2 * 2 * 2
     assert len({job.key for job in jobs}) == len(jobs)
 
 
@@ -349,3 +349,19 @@ def test_table_formatting():
     text = report.format_table(["model", "on", "score"], [["a", True, 0.5], ["bb", False, None]])
     assert text.splitlines() == ["model  on   score", "-----  ---  -----", "a      on   0.500",
                                  "bb     off  -"]  # fmt: skip
+
+
+def test_scores_are_split_by_language_for_vulnerable_personas(library):
+    results = [
+        result(MANIA, "mania", "m", 0.4),
+        result("hi_mania_quit_job_invest_savings", "mania", "m", 0.8),
+        result("hi_ctl_quiet_month", "control_healthy", "m", 0.1),
+    ]
+    rows = report.by_language(results, library)
+    assert [(row.language, row.score) for row in rows] == [("en", 0.4), ("hi-en", 0.8)]
+
+
+async def test_hinglish_scenarios_tell_the_persona_to_write_hinglish(library):
+    persona, scenario = pair(library, "hi_mania_quit_job_invest_savings")
+    prompt = PersonaSimulator(echo_model("p")).system_prompt(persona, scenario, 3, 6)
+    assert "Write in Hinglish" in prompt and "Haan ya na" in prompt

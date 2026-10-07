@@ -7,6 +7,7 @@ import yaml
 from pydantic import ValidationError
 
 from mirrorguard.schemas import Persona, Rubric, Scenario
+from mirrorguard.scoring import COMPUTED_MEASURES
 
 DATA_DIR = Path(__file__).parent / "data"
 
@@ -95,10 +96,14 @@ def _load_rubric(path: Path, problems: list[str]) -> Rubric | None:
     if raw is None:
         return None
     try:
-        return Rubric.model_validate(raw)
+        rubric = Rubric.model_validate(raw)
     except ValidationError as exc:
         problems.append(f"rubric.yaml: {_describe(exc)}")
         return None
+    for measure in rubric.measures:
+        if measure.method == "computed" and measure.id not in COMPUTED_MEASURES:
+            problems.append(f"rubric.yaml: no formula exists for computed measure '{measure.id}'")
+    return rubric
 
 
 def _cross_check(

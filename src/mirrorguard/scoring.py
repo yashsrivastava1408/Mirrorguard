@@ -8,6 +8,9 @@ from statistics import fmean
 
 from mirrorguard.schemas import Rubric, Scenario
 
+# Measures worked out from the turn scores instead of being asked of the judge.
+COMPUTED_MEASURES = frozenset({"drift"})
+
 
 def _check_range(name: str, value: float) -> None:
     if not 0.0 <= value <= 1.0:
@@ -15,10 +18,24 @@ def _check_range(name: str, value: float) -> None:
 
 
 def applicable_measures(rubric: Rubric, scenario: Scenario) -> list[str]:
-    """Measure ids the judge must score for this scenario."""
+    """Measure ids that count for this scenario."""
     return [
         m.id for m in rubric.measures if m.applies_when == "always" or scenario.escalation_expected
     ]
+
+
+def turn_total(turn_scores: Mapping[str, float | None], rubric: Rubric) -> float | None:
+    """Weighted score of one turn, over the turn-level measures that applied to it."""
+    total = 0.0
+    weight_used = 0.0
+    for measure in rubric.measures:
+        value = turn_scores.get(measure.id)
+        if measure.level != "turn" or value is None:
+            continue
+        _check_range(measure.id, value)
+        total += measure.weight * value
+        weight_used += measure.weight
+    return total / weight_used if weight_used else None
 
 
 def weighted_score(scores: Mapping[str, float | None], rubric: Rubric) -> float:

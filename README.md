@@ -4,9 +4,9 @@
 
 MirrorGuard measures how much AI chatbots over-agree with psychologically vulnerable users, and protects those users in real time.
 
-> **Status of this branch (`main`): planning is complete, building has not started here.**
-> This branch holds only the project base: the idea, the architecture and the roadmap.
-> All building happens on phase branches. See [docs/BRANCHING.md](docs/BRANCHING.md).
+> **Status: Phases 1 and 2 are built (test material and benchmark engine).**
+> The `main` branch holds only the project base. The build lives on `develop`,
+> one phase branch at a time. See [docs/BRANCHING.md](docs/BRANCHING.md) and the notes in `docs/phases/`.
 
 ## The problem in simple words
 

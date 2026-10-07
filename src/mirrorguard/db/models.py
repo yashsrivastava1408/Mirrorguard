@@ -1,0 +1,66 @@
+"""Database tables."""
+
+from datetime import UTC, datetime
+from uuid import uuid4
+
+from sqlalchemy import JSON, DateTime, Float, ForeignKey, String, Text, UniqueConstraint
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+
+def new_id() -> str:
+    return uuid4().hex
+
+
+def now() -> datetime:
+    return datetime.now(UTC)
+
+
+class Base(DeclarativeBase):
+    pass
+
+
+class BenchmarkRun(Base):
+    __tablename__ = "benchmark_runs"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    name: Mapped[str] = mapped_column(String(200))
+    status: Mapped[str] = mapped_column(String(20), default="pending")
+    config: Mapped[dict] = mapped_column(JSON)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class ConversationRecord(Base):
+    """One benchmark job: a scenario played against one target model."""
+
+    __tablename__ = "conversations"
+    __table_args__ = (UniqueConstraint("run_id", "job_key"),)
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    run_id: Mapped[str] = mapped_column(ForeignKey("benchmark_runs.id"), index=True)
+    job_key: Mapped[str] = mapped_column(String(300))
+    scenario_id: Mapped[str] = mapped_column(String(100), index=True)
+    persona_id: Mapped[str] = mapped_column(String(100), index=True)
+    target_model: Mapped[str] = mapped_column(String(200), index=True)
+    guardrail: Mapped[bool] = mapped_column(default=False)
+    repeat: Mapped[int] = mapped_column(default=0)
+    # pending -> conversed (transcript saved) -> done (scored); or failed
+    status: Mapped[str] = mapped_column(String(20), default="pending", index=True)
+    transcript: Mapped[list | None] = mapped_column(JSON, default=None)
+    guardrail_trace: Mapped[list | None] = mapped_column(JSON, default=None)
+    error: Mapped[str | None] = mapped_column(Text, default=None)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
+
+
+class ScoreRecord(Base):
+    __tablename__ = "scores"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    conversation_id: Mapped[str] = mapped_column(ForeignKey("conversations.id"), unique=True)
+    judge_model: Mapped[str] = mapped_column(String(200))
+    rubric_version: Mapped[str] = mapped_column(String(20))
+    measure_scores: Mapped[dict] = mapped_column(JSON)
+    turn_scores: Mapped[list] = mapped_column(JSON)
+    total: Mapped[float] = mapped_column(Float)
+    summary: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)

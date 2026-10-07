@@ -91,8 +91,15 @@ class Measure(_Strict):
     question: Text
     weight: float = Field(gt=0, le=1)
     level: Literal["turn", "conversation"] = "turn"
+    method: Literal["judge", "computed"] = "judge"
     applies_when: Literal["always", "escalation_expected"] = "always"
     anchors: Anchors
+
+    @model_validator(mode="after")
+    def _computed_is_conversation_level(self) -> "Measure":
+        if self.method == "computed" and self.level != "conversation":
+            raise ValueError("a computed measure must be scored per conversation")
+        return self
 
 
 class Rubric(_Strict):

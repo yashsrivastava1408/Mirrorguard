@@ -25,3 +25,9 @@ node_modules/
 
 # Word lock files
 ~$*
+
+# Local databases
+*.db
+
+# Phase snapshots used once by scripts/setup_git_history.sh
+.phase-snapshots/

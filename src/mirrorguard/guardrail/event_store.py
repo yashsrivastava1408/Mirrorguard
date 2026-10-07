@@ -117,7 +117,9 @@ class EventRepository:
         if self._db.engine.dialect.name == "sqlite":
             hour = func.strftime("%Y-%m-%dT%H:00", events.created_at)
         else:
-            hour = func.to_char(func.date_trunc("hour", events.created_at), 'YYYY-MM-DD"T"HH24:00')
+            # Bucket in UTC whatever the database's own time zone is set to.
+            in_utc = func.timezone("UTC", events.created_at)
+            hour = func.to_char(func.date_trunc("hour", in_utc), 'YYYY-MM-DD"T"HH24:00')
 
         def as_int(column):
             return func.coalesce(func.sum(cast(column, Integer)), 0)

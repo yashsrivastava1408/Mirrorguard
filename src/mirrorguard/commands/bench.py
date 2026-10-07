@@ -89,6 +89,21 @@ async def _cmd_db_init(args: argparse.Namespace, library: Library) -> int:
     return 0
 
 
+def _cmd_db_migrate(args: argparse.Namespace, library: Library) -> int:
+    from pathlib import Path
+
+    from alembic import command
+    from alembic.config import Config
+
+    import mirrorguard
+
+    config = Config()
+    config.set_main_option("script_location", str(Path(mirrorguard.__file__).parent / "migrations"))
+    command.upgrade(config, "head")
+    print("Database is up to date.")
+    return 0
+
+
 def _cmd_plan(args: argparse.Namespace, library: Library) -> int:
     jobs = _jobs(args, library, get_settings())
     print(
@@ -269,7 +284,12 @@ def _add_job_options(parser: argparse.ArgumentParser) -> None:
 
 def register(sub: argparse._SubParsersAction) -> None:
     db_sub = sub.add_parser("db", help="database commands").add_subparsers(required=True)
-    db_sub.add_parser("init", help="create the database tables").set_defaults(handler=_cmd_db_init)
+    db_sub.add_parser("init", help="create the tables directly (local SQLite)").set_defaults(
+        handler=_cmd_db_init
+    )
+    db_sub.add_parser("migrate", help="bring a production database up to date").set_defaults(
+        handler=_cmd_db_migrate
+    )
 
     models_sub = sub.add_parser("models", help="model commands").add_subparsers(required=True)
     models_sub.add_parser("check", help="check that every configured model answers").set_defaults(

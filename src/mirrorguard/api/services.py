@@ -39,7 +39,9 @@ class Services:
     redis: object | None = None
 
     async def start(self) -> None:
-        if self.database is not None:
+        # SQLite (local use) sets itself up. A production database is prepared
+        # beforehand with `mirrorguard db migrate`, so server copies never race to do it.
+        if self.database is not None and self.database.is_sqlite:
             await self.database.create_tables()
         if self.sink is not None:
             self.sink.start()

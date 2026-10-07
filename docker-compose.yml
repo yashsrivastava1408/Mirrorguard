@@ -1,0 +1,68 @@
+# Runs the whole system: database, cache, API and dashboard.
+#
+#   cp .env.example .env      # then fill in GROQ_API_KEY and POSTGRES_PASSWORD
+#   docker compose up --build
+#
+# API:       http://localhost:8000
+# Dashboard: http://localhost:3000
+
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: mirrorguard
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: mirrorguard
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mirrorguard"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # Brings the database up to date once, before any API copy starts.
+  migrate:
+    build: .
+    command: ["mirrorguard", "db", "migrate"]
+    env_file: .env
+    environment: &app-environment
+      MG_DATABASE_URL: postgresql+asyncpg://mirrorguard:${POSTGRES_PASSWORD}@postgres:5432/mirrorguard
+      MG_REDIS_URL: redis://redis:6379/0
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  api:
+    build: .
+    env_file: .env
+    environment: *app-environment
+    ports:
+      - "8000:8000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    # To handle more traffic, run more copies: docker compose up --scale api=3
+    # (put a load balancer in front and remove the fixed port above).
+
+  dashboard:
+    build: ./dashboard
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+volumes:
+  postgres-data:

@@ -1,0 +1,11 @@
+.venv
+.git
+.phase-snapshots
+**/__pycache__
+**/node_modules
+**/.next
+*.db
+.env
+runs
+tests
+docs
